@@ -1,0 +1,32 @@
+{
+  "name": "ai-knowledge-assistant",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Authenticated engineering knowledge assistant with versioned, evaluated retrieval-augmented generation. Angular, NestJS, and AWS.",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=11.0.0"
+  },
+  "packageManager": "pnpm@11.20.0",
+  "scripts": {
+    "lint": "pnpm -r --if-present run lint",
+    "lint:fix": "pnpm -r --if-present run lint:fix",
+    "typecheck": "pnpm -r --if-present run typecheck",
+    "test": "pnpm -r --if-present run test",
+    "build": "pnpm -r --if-present run build",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "cdk": "pnpm --filter @ai-knowledge-assistant/infrastructure exec cdk",
+    "dev:web": "pnpm --filter @ai-knowledge-assistant/web run start",
+    "dev:api": "pnpm --filter @ai-knowledge-assistant/api run start:dev"
+  },
+  "devDependencies": {
+    "@eslint/js": "catalog:",
+    "eslint": "catalog:",
+    "eslint-config-prettier": "catalog:",
+    "prettier": "catalog:",
+    "typescript": "catalog:",
+    "typescript-eslint": "catalog:"
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "name": "@ai-knowledge-assistant/aws-clients",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@aws-sdk/client-bedrock-runtime": "3.1106.0",
+    "@aws-sdk/client-dynamodb": "3.1106.0",
+    "@aws-sdk/client-s3": "3.1106.0",
+    "@aws-sdk/client-secrets-manager": "3.1106.0",
+    "@aws-sdk/client-sqs": "3.1106.0",
+    "@aws-sdk/lib-dynamodb": "3.1106.0",
+    "@aws-sdk/s3-request-presigner": "3.1106.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "eslint": "catalog:",
+    "typescript": "catalog:",
+    "typescript-eslint": "catalog:",
+    "vitest": "catalog:"
+  }
+}

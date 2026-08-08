@@ -1,0 +1,11 @@
+node_modules
+dist
+build
+coverage
+.angular
+cdk.out
+*.lock
+pnpm-lock.yaml
+.venv
+uv.lock
+evaluation/reports

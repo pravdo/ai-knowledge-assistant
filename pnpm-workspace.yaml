@@ -1,0 +1,26 @@
+packages:
+  - 'apps/web'
+  - 'apps/api'
+  - 'apps/chat-stream'
+  - 'packages/*'
+  - 'infrastructure'
+
+allowBuilds:
+  '@parcel/watcher': true
+  '@swc/core': true
+  esbuild: true
+  lmdb: true
+  msgpackr-extract: true
+  unrs-resolver: true
+
+catalog:
+  typescript: 6.0.3
+  eslint: 10.8.1
+  '@eslint/js': 9.18.0
+  eslint-config-prettier: 10.1.8
+  typescript-eslint: 8.66.0
+  vitest: 4.1.10
+  prettier: 3.9.6
+
+minimumReleaseAgeExclude:
+  - eslint@10.8.1

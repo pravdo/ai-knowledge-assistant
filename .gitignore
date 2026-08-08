@@ -1,0 +1,56 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+build/
+out/
+*.tsbuildinfo
+.angular/
+
+# CDK
+infrastructure/cdk.out/
+infrastructure/cdk.context.json
+**/*.d.ts.map
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+uv.lock.bak
+
+# Test / coverage
+coverage/
+.nyc_output/
+.coverage
+.coverage.*
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Evaluation run artifacts (generated, not source)
+evaluation/reports/*
+!evaluation/reports/.gitkeep
+
+# Editor / OS
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+
+# Claude
+.claude/settings.local.json
