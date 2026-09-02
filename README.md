@@ -11,12 +11,11 @@ Vectors, EventBridge/SQS, Bedrock), with NVIDIA NIM/NeMo Retriever as a second, 
 provider. Full specification: see the
 [source blueprint](./AI_Knowledge_Assistant_Complete_Project_Blueprint.pdf).
 
-> **Status: Week 1 — foundation.** This repository currently contains the monorepo scaffold: every
-> app and package builds, lints, and tests; all 7 CDK stacks synthesize; the health endpoint and a
-> few genuinely-completable pieces (document state machine, RAG contracts, evaluation dataset
-> validation, ingestion event normalization) have real, tested logic. Everything else — Cognito,
-> the actual retrieval/generation pipeline, deployment — lands week by week per the roadmap in the
-> source blueprint. There is no demo recording or cloud deployment yet.
+> **Status: Chunk 1 — identity & edge.** `AuthStack` (Cognito, PKCE app client) and `EdgeStack`
+> (private S3 + CloudFront + OAC) are built and unit tested. The Angular app has a real auth
+> module (`angular-oauth2-oidc`), a route guard, and login/callback pages. Nothing is deployed to
+> AWS yet — that's the next step, see "Cloud deployment" below. Everything else (workspace API,
+> upload, retrieval/generation) lands chunk by chunk per the roadmap in the source blueprint.
 
 ## Architecture
 
@@ -76,12 +75,35 @@ credentials at all.
 
 ## Cloud deployment
 
-Not yet available — Cognito, the data stack, and the API stack are built starting Week 2. Once
-they exist:
+One-time account setup (see [docs/adr/0001-serverless-first-compute.md](./docs/adr/0001-serverless-first-compute.md)
+and the prerequisites your AWS account needs):
 
 ```bash
-pnpm cdk synth --context environment=dev    # already works today (empty stacks)
-pnpm cdk deploy --context environment=dev   # requires AWS credentials; not yet meaningful
+aws configure                                   # a dedicated profile for this project, not root credentials
+export CDK_DEFAULT_ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
+export CDK_DEFAULT_REGION=us-east-1             # pick one region and use it consistently
+pnpm --filter @ai-knowledge-assistant/infrastructure exec cdk bootstrap
+```
+
+Set an AWS Budget + billing alarm in the console **before** deploying anything.
+
+Deploy the identity and edge stacks:
+
+```bash
+pnpm cdk deploy aka-dev-Auth aka-dev-Edge --context environment=dev
+```
+
+Then wire the Angular app to the real Cognito pool — copy the `UserPoolId` and `UserPoolClientId`
+outputs into `apps/web/src/environments/environment.ts` (replacing the `REPLACE_*` placeholders;
+`issuer` is `https://cognito-idp.<region>.amazonaws.com/<UserPoolId>`). None of this is a secret —
+a public SPA client has no client secret to protect.
+
+The remaining stacks (`DataStack`, `ApiStack`, `IngestionStack`, `AiStack`,
+`ObservabilityStack`) still synthesize as empty placeholders; deploying them does nothing useful
+yet:
+
+```bash
+pnpm cdk synth --context environment=dev    # all 7 stacks
 ```
 
 Each of `dev`/`stage`/`prod` gets its own Cognito resources, S3 buckets, DynamoDB tables, SQS
@@ -90,10 +112,11 @@ queues, vector indexes, API stage, and KMS keys — see
 
 ## Configuration and secrets
 
-Not yet applicable — see [docs/threat-model.md](./docs/threat-model.md#data-protection) for the
-policy that will govern this once real configuration exists (AWS resource names and model IDs are
-configuration; provider credentials and signing material are secrets, stored in Secrets Manager,
-never in the repository or logs).
+`apps/web/src/environments/environment.ts` holds the Cognito issuer and client ID — configuration,
+not secrets (a public SPA client has no client secret to protect). No provider credentials exist
+yet; once they do, see [docs/threat-model.md](./docs/threat-model.md#data-protection) for the
+policy (AWS resource names and model IDs are configuration; provider credentials and signing
+material are secrets, stored in Secrets Manager, never in the repository or logs).
 
 ## Running tests
 
@@ -146,12 +169,13 @@ a given environment; disposable dev resources use `RemovalPolicy.DESTROY`, retai
 
 ## Limitations
 
-This is Week 1 of a 15-week roadmap. As of today: no authentication, no document upload, no
-retrieval, no generation, nothing deployed to AWS. What _is_ real: the monorepo builds end to end;
-the document state machine, workspace role hierarchy, RAG contracts, and streaming NDJSON protocol
-are implemented and tested; the ingestion worker's event-normalization stage and the evaluation
-dataset validator work against real (synthetic) data; all 7 CDK stacks synthesize valid, empty
-CloudFormation templates.
+No document upload, no retrieval, no generation, nothing deployed to AWS yet. What _is_ real: the
+monorepo builds end to end; `AuthStack`/`EdgeStack` are fully built and unit tested (not yet
+deployed); the Angular app has a working Cognito PKCE login flow, wired against placeholder config
+until deployed; the document state machine, workspace role hierarchy, RAG contracts, and streaming
+NDJSON protocol are implemented and tested; the ingestion worker's event-normalization stage and
+the evaluation dataset validator work against real (synthetic) data; all 7 CDK stacks synthesize
+valid CloudFormation (`DataStack` through `ObservabilityStack` are still empty placeholders).
 
 ## Certification learning map
 
