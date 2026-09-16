@@ -75,9 +75,9 @@ credentials at all.
 
 ## Cloud deployment
 
-**Live (`dev`, account `028987315xxx, `us-east-1`):**
+**Live (`dev`, account `028987315xxx`, `us-east-1`):**
 
-- App: https://d1cnvtst8qogxl.cloudfront.nets
+- App: https://d1cnvtst8qogxl.cloudfront.net
 - Cognito Hosted UI domain: `aka-dev-028987315xxx.auth.us-east-1.amazoncognito.com`
 
 There's no user account yet — use the Hosted UI's sign-up flow (reachable from the app's "Sign in"
