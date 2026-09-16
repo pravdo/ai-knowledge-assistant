@@ -11,11 +11,11 @@ Vectors, EventBridge/SQS, Bedrock), with NVIDIA NIM/NeMo Retriever as a second, 
 provider. Full specification: see the
 [source blueprint](./AI_Knowledge_Assistant_Complete_Project_Blueprint.pdf).
 
-> **Status: Chunk 1 — identity & edge.** `AuthStack` (Cognito, PKCE app client) and `EdgeStack`
-> (private S3 + CloudFront + OAC) are built and unit tested. The Angular app has a real auth
-> module (`angular-oauth2-oidc`), a route guard, and login/callback pages. Nothing is deployed to
-> AWS yet — that's the next step, see "Cloud deployment" below. Everything else (workspace API,
-> upload, retrieval/generation) lands chunk by chunk per the roadmap in the source blueprint.
+> **Status: Chunk 1 — identity & edge, deployed.** `AuthStack` (Cognito, PKCE app client) and
+> `EdgeStack` (private S3 + CloudFront + OAC) are live in a `dev` AWS environment; the built
+> Angular app is served from CloudFront with a working Cognito PKCE login flow. Everything else
+> (workspace API, upload, retrieval/generation) lands chunk by chunk per the roadmap in the source
+> blueprint — see "Cloud deployment" below for the live URLs and how to redeploy.
 
 ## Architecture
 
@@ -75,32 +75,54 @@ credentials at all.
 
 ## Cloud deployment
 
-One-time account setup (see [docs/adr/0001-serverless-first-compute.md](./docs/adr/0001-serverless-first-compute.md)
-and the prerequisites your AWS account needs):
+**Live (`dev`, account `028987315xxx, `us-east-1`):**
+
+- App: https://d1cnvtst8qogxl.cloudfront.nets
+- Cognito Hosted UI domain: `aka-dev-028987315xxx.auth.us-east-1.amazoncognito.com`
+
+There's no user account yet — use the Hosted UI's sign-up flow (reachable from the app's "Sign in"
+button) to create one; self-signup is enabled (`AuthStack`).
+
+### One-time account setup
 
 ```bash
-aws configure                                   # a dedicated profile for this project, not root credentials
-export CDK_DEFAULT_ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
-export CDK_DEFAULT_REGION=us-east-1             # pick one region and use it consistently
+aws configure                                   # a dedicated IAM user for this project, not root credentials
 pnpm --filter @ai-knowledge-assistant/infrastructure exec cdk bootstrap
 ```
 
 Set an AWS Budget + billing alarm in the console **before** deploying anything.
 
-Deploy the identity and edge stacks:
+### Deploy or redeploy identity and edge
 
 ```bash
-pnpm cdk deploy aka-dev-Auth aka-dev-Edge --context environment=dev
+pnpm cdk deploy aka-dev-Auth aka-dev-Edge --context environment=dev \
+  --context callbackUrls=https://<your-cloudfront-domain>/auth/callback \
+  --context logoutUrls=https://<your-cloudfront-domain>/
 ```
 
-Then wire the Angular app to the real Cognito pool — copy the `UserPoolId` and `UserPoolClientId`
-outputs into `apps/web/src/environments/environment.ts` (replacing the `REPLACE_*` placeholders;
-`issuer` is `https://cognito-idp.<region>.amazonaws.com/<UserPoolId>`). None of this is a secret —
-a public SPA client has no client secret to protect.
+The `callbackUrls`/`logoutUrls` context is only needed once you know your CloudFront domain (a
+circular dependency on the first deploy — `localhost:4200` always works without it). Then wire the
+Angular app to the real Cognito pool: copy `UserPoolId`/`UserPoolClientId` from the deploy output
+into `apps/web/src/environments/environment.ts` (`issuer` is
+`https://cognito-idp.<region>.amazonaws.com/<UserPoolId>`). None of this is a secret — a public
+SPA client has no client secret to protect.
 
-The remaining stacks (`DataStack`, `ApiStack`, `IngestionStack`, `AiStack`,
-`ObservabilityStack`) still synthesize as empty placeholders; deploying them does nothing useful
-yet:
+### Deploy the built app to S3 + CloudFront
+
+`EdgeStack` provisions the bucket and distribution but does not push app content (kept decoupled
+so the stack always synthesizes independently of whether the app has been built — see
+`infrastructure/lib/edge-stack.ts`):
+
+```bash
+pnpm --filter @ai-knowledge-assistant/web run build
+aws s3 sync apps/web/dist/web/browser/ s3://<WebBucketName output> --delete
+aws cloudfront create-invalidation --distribution-id <DistributionId output> --paths "/*"
+```
+
+### Remaining stacks
+
+`DataStack`, `ApiStack`, `IngestionStack`, `AiStack`, `ObservabilityStack` still synthesize as
+empty placeholders; deploying them does nothing useful yet:
 
 ```bash
 pnpm cdk synth --context environment=dev    # all 7 stacks
@@ -169,13 +191,14 @@ a given environment; disposable dev resources use `RemovalPolicy.DESTROY`, retai
 
 ## Limitations
 
-No document upload, no retrieval, no generation, nothing deployed to AWS yet. What _is_ real: the
-monorepo builds end to end; `AuthStack`/`EdgeStack` are fully built and unit tested (not yet
-deployed); the Angular app has a working Cognito PKCE login flow, wired against placeholder config
-until deployed; the document state machine, workspace role hierarchy, RAG contracts, and streaming
-NDJSON protocol are implemented and tested; the ingestion worker's event-normalization stage and
-the evaluation dataset validator work against real (synthetic) data; all 7 CDK stacks synthesize
-valid CloudFormation (`DataStack` through `ObservabilityStack` are still empty placeholders).
+No workspaces, no document upload, no retrieval, no generation yet — there's nothing to do once
+you sign in. What _is_ real and deployed: Cognito PKCE sign-in/sign-out against a live user pool,
+served from CloudFront through a private S3 bucket with Origin Access Control (see "Cloud
+deployment" above for live URLs). Also real, tested, but not yet deployed: the document state
+machine, workspace role hierarchy, RAG contracts, and streaming NDJSON protocol; the ingestion
+worker's event-normalization stage and the evaluation dataset validator (both work against real
+synthetic data); all 7 CDK stacks synthesize valid CloudFormation (`DataStack` through
+`ObservabilityStack` are still empty placeholders).
 
 ## Certification learning map
 
