@@ -4,6 +4,10 @@
   "testEnvironment": "node",
   "testRegex": ".e2e-spec.ts$",
   "transform": {
-    "^.+\\.(t|j)s$": "ts-jest"
+    "^.+\\.(t|j)s$": ["@swc/jest"]
+  },
+  "moduleNameMapper": {
+    "^@ai-knowledge-assistant/(.*)$": "<rootDir>/../../../packages/$1/src/index.ts",
+    "^(\\.{1,2}/.*)\\.js$": "$1"
   }
 }

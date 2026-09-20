@@ -19,10 +19,17 @@
     "test:e2e": "jest --config ./test/jest-e2e.json"
   },
   "dependencies": {
+    "@ai-knowledge-assistant/aws-clients": "workspace:*",
+    "@ai-knowledge-assistant/contracts": "workspace:*",
+    "@ai-knowledge-assistant/domain": "workspace:*",
+    "@ai-knowledge-assistant/observability": "workspace:*",
+    "@aws-sdk/lib-dynamodb": "3.1106.0",
+    "@codegenie/serverless-express": "5.0.0",
     "@nestjs/common": "11.1.28",
     "@nestjs/config": "4.0.4",
     "@nestjs/core": "11.1.28",
     "@nestjs/platform-express": "11.1.28",
+    "aws-jwt-verify": "5.2.1",
     "class-transformer": "0.5.1",
     "class-validator": "0.15.1",
     "reflect-metadata": "0.2.2",
@@ -34,10 +41,13 @@
     "@nestjs/cli": "11.0.24",
     "@nestjs/schematics": "^11.0.0",
     "@nestjs/testing": "11.1.28",
+    "@types/aws-lambda": "8.10.162",
     "@types/express": "^5.0.0",
     "@types/jest": "^30.0.0",
     "@types/node": "^24.0.0",
     "@types/supertest": "7.2.1",
+    "@swc/core": "1.16.2",
+    "@swc/jest": "0.2.39",
     "eslint": "^9.18.0",
     "eslint-config-prettier": "10.1.8",
     "eslint-plugin-prettier": "^5.2.2",
@@ -46,7 +56,6 @@
     "prettier": "3.9.6",
     "source-map-support": "^0.5.21",
     "supertest": "7.2.2",
-    "ts-jest": "29.4.12",
     "ts-loader": "^9.5.2",
     "ts-node": "10.9.2",
     "tsconfig-paths": "^4.2.0",
@@ -62,7 +71,13 @@
     "rootDir": "src",
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {
-      "^.+\\.(t|j)s$": "ts-jest"
+      "^.+\\.(t|j)s$": [
+        "@swc/jest"
+      ]
+    },
+    "moduleNameMapper": {
+      "^@ai-knowledge-assistant/(.*)$": "<rootDir>/../../../packages/$1/src/index.ts",
+      "^(\\.{1,2}/.*)\\.js$": "$1"
     },
     "collectCoverageFrom": [
       "**/*.(t|j)s"

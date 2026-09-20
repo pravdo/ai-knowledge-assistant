@@ -3,6 +3,7 @@ import type { Routes } from '@angular/router';
 import { AuthCallbackPage } from './core/auth/auth-callback-page';
 import { authGuard } from './core/auth/auth.guard';
 import { LoginPage } from './core/auth/login-page';
+import { WorkspacesPage } from './features/workspaces/workspaces-page';
 import { PlaceholderPage, type PlaceholderPageData } from './shared/components/placeholder-page';
 
 function placeholder(title: string, description: string): { data: PlaceholderPageData } {
@@ -18,9 +19,8 @@ export const routes: Routes = [
   { path: 'auth/callback', component: AuthCallbackPage },
   {
     path: 'workspaces',
-    component: PlaceholderPage,
+    component: WorkspacesPage,
     canActivate: [authGuard],
-    ...placeholder('Workspaces', 'Workspaces you can access, and create-workspace action.'),
   },
   {
     path: 'workspaces/:workspaceId',

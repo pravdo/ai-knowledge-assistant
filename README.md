@@ -11,11 +11,12 @@ Vectors, EventBridge/SQS, Bedrock), with NVIDIA NIM/NeMo Retriever as a second, 
 provider. Full specification: see the
 [source blueprint](./AI_Knowledge_Assistant_Complete_Project_Blueprint.pdf).
 
-> **Status: Chunk 1 — identity & edge, deployed.** `AuthStack` (Cognito, PKCE app client) and
-> `EdgeStack` (private S3 + CloudFront + OAC) are live in a `dev` AWS environment; the built
-> Angular app is served from CloudFront with a working Cognito PKCE login flow. Everything else
-> (workspace API, upload, retrieval/generation) lands chunk by chunk per the roadmap in the source
-> blueprint — see "Cloud deployment" below for the live URLs and how to redeploy.
+> **Status: Chunk 2 — workspace control plane, deployed.** On top of Chunk 1's `AuthStack`
+> (Cognito, PKCE) and `EdgeStack` (private S3 + CloudFront + OAC), `DataStack` (DynamoDB single
+> table) and `ApiStack` (API Gateway + the NestJS Lambda) are live in a `dev` AWS environment: after
+> signing in you can create and list workspaces, each stored with an OWNER membership. Everything
+> else (upload, retrieval/generation) lands chunk by chunk per the roadmap in the source blueprint
+> — see "Cloud deployment" below for the live URLs and how to redeploy.
 
 ## Architecture
 
@@ -79,6 +80,8 @@ credentials at all.
 
 - App: https://d1cnvtst8qogxl.cloudfront.net
 - Cognito Hosted UI domain: `aka-dev-028987315xxx.auth.us-east-1.amazoncognito.com`
+- API: https://n92c5080p9.execute-api.us-east-1.amazonaws.com/dev (`/health/live`, `/health/ready`
+  are public; everything under `/v1` needs a Cognito access token)
 
 There's no user account yet — use the Hosted UI's sign-up flow (reachable from the app's "Sign in"
 button) to create one; self-signup is enabled (`AuthStack`).
@@ -119,10 +122,22 @@ aws s3 sync apps/web/dist/web/browser/ s3://<WebBucketName output> --delete
 aws cloudfront create-invalidation --distribution-id <DistributionId output> --paths "/*"
 ```
 
+### Deploy the API
+
+```bash
+pnpm cdk deploy aka-dev-Data aka-dev-Api --context environment=dev
+```
+
+`cdk.json`'s app command runs `pnpm build:lambda` first (compiles `apps/api` and the packages it
+uses with `tsc`), and `ApiStack` bundles that compiled output rather than the TypeScript source:
+esbuild doesn't implement `emitDecoratorMetadata`, so bundling `.ts` directly leaves NestJS unable
+to inject constructor dependencies. After deploying, copy the `ApiUrl` output into
+`apps/web/src/environments/environment.ts` (`apiBaseUrl`) and redeploy the web app as above.
+
 ### Remaining stacks
 
-`DataStack`, `ApiStack`, `IngestionStack`, `AiStack`, `ObservabilityStack` still synthesize as
-empty placeholders; deploying them does nothing useful yet:
+`IngestionStack`, `AiStack`, `ObservabilityStack` still synthesize as empty placeholders;
+deploying them does nothing useful yet:
 
 ```bash
 pnpm cdk synth --context environment=dev    # all 7 stacks
@@ -178,26 +193,28 @@ incident runbooks are specified in
 
 ## Cost controls
 
-No cloud resources are deployed yet, so there is no running cost. The cost-control mechanisms this
-project will use once deployed (AWS Budgets alerts, per-user/workspace quotas, reserved
+The deployed `dev` resources are pay-per-use (Lambda, API Gateway, on-demand DynamoDB, CloudFront,
+Cognito free tier), so idle cost is close to zero; API Gateway is throttled to 20 req/s. The
+cost-control mechanisms this project will use as more is deployed (AWS Budgets alerts, per-user/workspace quotas, reserved
 concurrency, development-tier model allowlists, log retention limits) are listed in
 [docs/threat-model.md](./docs/threat-model.md#abuse-and-cost-controls).
 
 ## Cleanup
 
-Nothing is deployed yet. Once stacks exist, `pnpm cdk destroy --context environment=dev` tears down
-a given environment; disposable dev resources use `RemovalPolicy.DESTROY`, retained resources
+`pnpm cdk destroy --context environment=dev` tears down a given environment; disposable dev resources use `RemovalPolicy.DESTROY`, retained resources
 (documents, evaluation history) do not.
 
 ## Limitations
 
-No workspaces, no document upload, no retrieval, no generation yet — there's nothing to do once
-you sign in. What _is_ real and deployed: Cognito PKCE sign-in/sign-out against a live user pool,
-served from CloudFront through a private S3 bucket with Origin Access Control (see "Cloud
-deployment" above for live URLs). Also real, tested, but not yet deployed: the document state
+No document upload, no retrieval, no generation yet — after signing in you can only create and
+list workspaces. What _is_ real and deployed: Cognito PKCE sign-in/sign-out against a live user
+pool, served from CloudFront through a private S3 bucket with Origin Access Control, plus a
+Cognito-protected workspace API backed by DynamoDB (see "Cloud deployment" above for live URLs).
+The authenticated `/v1` routes have unit tests but have not been exercised end-to-end from a
+browser session. Also real, tested, but not yet deployed: the document state
 machine, workspace role hierarchy, RAG contracts, and streaming NDJSON protocol; the ingestion
 worker's event-normalization stage and the evaluation dataset validator (both work against real
-synthetic data); all 7 CDK stacks synthesize valid CloudFormation (`DataStack` through
+synthetic data); all 7 CDK stacks synthesize valid CloudFormation (`IngestionStack`, `AiStack` and
 `ObservabilityStack` are still empty placeholders).
 
 ## Certification learning map

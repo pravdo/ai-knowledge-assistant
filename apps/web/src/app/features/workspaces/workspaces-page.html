@@ -1,0 +1,38 @@
+<section class="workspaces-page">
+  <h1>Workspaces</h1>
+
+  @if (errorMessage()) {
+  <p class="workspaces-page__error" role="alert">{{ errorMessage() }}</p>
+  }
+
+  <form (ngSubmit)="submitCreate()" class="workspaces-page__create">
+    <label>
+      Name
+      <input type="text" name="name" [(ngModel)]="name" required maxlength="100" />
+    </label>
+    <label>
+      Description
+      <input type="text" name="description" [(ngModel)]="description" maxlength="500" />
+    </label>
+    <button type="submit" [disabled]="creating() || !name.trim()">
+      {{ creating() ? 'Creating…' : 'Create workspace' }}
+    </button>
+  </form>
+
+  @if (loading()) {
+  <p>Loading workspaces…</p>
+  } @else if (workspaces().length === 0) {
+  <p>You don't have any workspaces yet. Create one above.</p>
+  } @else {
+  <ul class="workspaces-page__list">
+    @for (workspace of workspaces(); track workspace.workspaceId) {
+    <li>
+      <a [routerLink]="['/workspaces', workspace.workspaceId]">{{ workspace.name }}</a>
+      @if (workspace.description) {
+      <p>{{ workspace.description }}</p>
+      }
+    </li>
+    }
+  </ul>
+  }
+</section>

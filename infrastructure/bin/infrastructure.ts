@@ -55,11 +55,27 @@ const authStack = new AuthStack(app, stackId('Auth'), {
   logoutUrls: ['http://localhost:4200/', ...contextUrlList('logoutUrls')],
 });
 
+const dataStack = new DataStack(app, stackId('Data'), {
+  env,
+  applicationName: APPLICATION_NAME,
+  environment,
+});
+const apiStack = new ApiStack(app, stackId('Api'), {
+  env,
+  applicationName: APPLICATION_NAME,
+  environment,
+  userPoolId: authStack.userPool.userPoolId,
+  userPoolClientId: authStack.userPoolClient.userPoolClientId,
+  tableArn: dataStack.tableArn,
+  tableName: dataStack.tableName,
+  allowedOrigins: [`https://${edgeStack.distributionDomainName}`, 'http://localhost:4200'],
+});
+
 const stacks = [
   edgeStack,
   authStack,
-  new DataStack(app, stackId('Data'), { env, applicationName: APPLICATION_NAME, environment }),
-  new ApiStack(app, stackId('Api'), { env, applicationName: APPLICATION_NAME, environment }),
+  dataStack,
+  apiStack,
   new IngestionStack(app, stackId('Ingestion'), {
     env,
     applicationName: APPLICATION_NAME,

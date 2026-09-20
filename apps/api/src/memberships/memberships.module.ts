@@ -1,6 +1,10 @@
 import { Module } from '@nestjs/common';
 
-// Every workspace use case authorizes through this module first. Never authorize on the
-// presence of a workspace/document/conversation ID alone — see docs/threat-model.md.
-@Module({})
+import { MembershipsRepository } from './memberships.repository.js';
+import { MembershipsService } from './memberships.service.js';
+
+@Module({
+  providers: [MembershipsRepository, MembershipsService],
+  exports: [MembershipsService],
+})
 export class MembershipsModule {}

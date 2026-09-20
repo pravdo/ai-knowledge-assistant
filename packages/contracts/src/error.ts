@@ -16,6 +16,7 @@ export const STABLE_ERROR_CODES = [
   'VECTOR_CONFIGURATION_MISMATCH',
   'CONFLICT',
   'RATE_LIMITED',
+  'INTERNAL_ERROR',
 ] as const;
 
 export type StableErrorCode = (typeof STABLE_ERROR_CODES)[number];

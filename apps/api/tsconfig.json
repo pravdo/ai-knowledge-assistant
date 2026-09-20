@@ -13,6 +13,6 @@
     "rootDir": ".",
     "incremental": true,
     "composite": false,
-    "types": ["jest", "node", "express", "supertest"]
+    "types": ["jest", "node", "express", "supertest", "aws-lambda"]
   }
 }

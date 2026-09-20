@@ -1,0 +1,27 @@
+import { ValidationPipe } from '@nestjs/common';
+import { NestFactory } from '@nestjs/core';
+import type { NestExpressApplication } from '@nestjs/platform-express';
+
+import { AppModule } from './app.module.js';
+import { ProblemDetailsFilter } from './common/problem-details.filter.js';
+
+// Shared by main.ts (local dev, Express listening on a port) and lambda.ts (API Gateway via
+// serverless-express) so the two never drift apart.
+export async function createApp(): Promise<NestExpressApplication> {
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  const allowedOrigins = (process.env['CORS_ALLOWED_ORIGINS'] ?? 'http://localhost:4200')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+  app.enableCors({ origin: allowedOrigins, allowedHeaders: ['authorization', 'content-type'] });
+  app.setGlobalPrefix('v1', { exclude: ['health/live', 'health/ready'] });
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    }),
+  );
+  app.useGlobalFilters(new ProblemDetailsFilter());
+  return app;
+}

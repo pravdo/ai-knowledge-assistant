@@ -8,7 +8,8 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "typecheck": "tsc --noEmit",
-    "test": "jest",
+    "build:lambda": "pnpm --filter \"@ai-knowledge-assistant/api...\" run build",
+    "test": "pnpm build:lambda && jest",
     "cdk": "cdk"
   },
   "dependencies": {
@@ -21,6 +22,7 @@
     "@types/jest": "^30",
     "@types/node": "^24.10.1",
     "aws-cdk": "2.1135.1",
+    "esbuild": "0.28.1",
     "eslint": "catalog:",
     "eslint-config-prettier": "catalog:",
     "jest": "^30",
