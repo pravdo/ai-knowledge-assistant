@@ -5,9 +5,6 @@ import type { Request } from 'express';
 
 import { ProblemDetailsException } from '../common/problem-details.exception.js';
 
-// Populated from the access token's `sub` claim once the guard has verified it. Email is
-// deliberately absent: Cognito access tokens don't carry it, and nothing in the authorization
-// model (workspace membership by userId) needs it.
 export interface AuthenticatedUser {
   readonly id: string;
 }
@@ -20,20 +17,13 @@ function extractBearerToken(header: string | undefined): string | undefined {
   return header?.startsWith('Bearer ') ? header.slice('Bearer '.length) : undefined;
 }
 
-// §5.4 step 1: "Read authenticated subject from the validated token context." Verifies the
-// access token's signature, expiry, and audience against Cognito's JWKS on every request —
-// identically whether running locally or behind API Gateway's own Cognito authorizer. This guard
-// is the single source of truth for "who is the caller," so local dev and deployed behavior can
-// never diverge, and it never trusts a request claiming to already be authenticated.
+// Verifies the access token's signature, expiry, and audience against Cognito's JWKS on every request
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
   private verifier: ReturnType<typeof CognitoJwtVerifier.create> | undefined;
 
   constructor(private readonly config: ConfigService) {}
 
-  // Built lazily, on first use rather than in the constructor: JwtAuthGuard is a singleton
-  // provider Nest instantiates at bootstrap, and health/live must stay up even if Cognito
-  // configuration is missing or broken — the app should start; only guarded routes should fail.
   private getVerifier(): ReturnType<typeof CognitoJwtVerifier.create> {
     this.verifier ??= CognitoJwtVerifier.create({
       userPoolId: this.config.getOrThrow<string>('COGNITO_USER_POOL_ID'),

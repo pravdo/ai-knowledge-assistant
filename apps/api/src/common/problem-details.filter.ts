@@ -1,80 +1,57 @@
 import {
+  BadRequestException,
   Catch,
-  HttpException,
   HttpStatus,
+  NotFoundException,
   type ArgumentsHost,
   type ExceptionFilter,
 } from '@nestjs/common';
-import type { ProblemDetails, StableErrorCode } from '@ai-knowledge-assistant/contracts';
+import type { ProblemDetails } from '@ai-knowledge-assistant/contracts';
 import { RETRYABLE_ERROR_CODES } from '@ai-knowledge-assistant/contracts';
-import { createLogger } from '@ai-knowledge-assistant/observability';
 import { randomUUID } from 'node:crypto';
 import type { Response } from 'express';
 
+import { logger } from '../observability/logger.js';
 import { ProblemDetailsException } from './problem-details.exception.js';
 
-// Exceptions Nest raises itself (validation pipe, the router's 404, the readiness probe's 503)
-// carry a status but no stable code. Map the status to the closest one — labelling all of them
-// VALIDATION_FAILED misreports a 404 as a bad request to clients and to log-based alerting.
-const CODE_BY_STATUS: Readonly<Record<number, StableErrorCode>> = {
-  [HttpStatus.BAD_REQUEST]: 'VALIDATION_FAILED',
-  [HttpStatus.UNAUTHORIZED]: 'AUTHENTICATION_REQUIRED',
-  [HttpStatus.FORBIDDEN]: 'WORKSPACE_ACCESS_DENIED',
-  [HttpStatus.NOT_FOUND]: 'NOT_FOUND',
-  [HttpStatus.CONFLICT]: 'CONFLICT',
-  [HttpStatus.TOO_MANY_REQUESTS]: 'RATE_LIMITED',
-};
-
-function toTitle(code: StableErrorCode): string {
-  const words = code.toLowerCase().replace(/_/g, ' ');
-  return words.charAt(0).toUpperCase() + words.slice(1);
+function toProblemDetailsException(exception: unknown): ProblemDetailsException | undefined {
+  if (exception instanceof ProblemDetailsException) {
+    return exception;
+  }
+  if (exception instanceof BadRequestException) {
+    return new ProblemDetailsException('VALIDATION_FAILED', validationDetail(exception));
+  }
+  if (exception instanceof NotFoundException) {
+    return new ProblemDetailsException('NOT_FOUND', exception.message);
+  }
+  return undefined;
 }
 
-const logger = createLogger({
-  service: 'api',
-  environment: process.env['ENVIRONMENT'] ?? 'dev',
-  applicationVersion: process.env['APPLICATION_VERSION'] ?? '0.0.0',
-});
+function validationDetail(exception: BadRequestException): string {
+  const body = exception.getResponse();
+  const message = typeof body === 'string' ? body : (body as { message?: unknown }).message;
+  if (Array.isArray(message)) {
+    return message.map(String).join(' ');
+  }
+  return typeof message === 'string' ? message : exception.message;
+}
 
-// §5.3: one stable, problem-details-style shape for every response. Never exposes stack traces,
-// DynamoDB key internals, provider credentials, or full provider responses (§5.3, §9.6) — those
-// go to structured logs only, keyed by requestId so they can be correlated after the fact.
+// stable, problem-details-style shape for every response
 @Catch()
 export class ProblemDetailsFilter implements ExceptionFilter {
   catch(exception: unknown, host: ArgumentsHost): void {
     const response = host.switchToHttp().getResponse<Response>();
     const requestId = randomUUID();
 
-    if (exception instanceof ProblemDetailsException) {
-      const status = exception.getStatus();
+    const problem = toProblemDetailsException(exception);
+    if (problem) {
       this.respond(response, requestId, {
-        type: exception.code,
-        title: exception.message,
-        status,
-        detail: exception.message,
+        type: problem.code,
+        title: problem.message,
+        status: problem.getStatus(),
+        detail: problem.message,
         requestId,
-        retryable: RETRYABLE_ERROR_CODES.has(exception.code),
-      });
-      return;
-    }
-
-    if (exception instanceof HttpException) {
-      const status = exception.getStatus();
-      const body = exception.getResponse();
-      const rawMessage = typeof body === 'string' ? body : (body as { message?: unknown }).message;
-      const detail = Array.isArray(rawMessage)
-        ? rawMessage.map(String).join(' ')
-        : typeof rawMessage === 'string'
-          ? rawMessage
-          : exception.message;
-      const code = CODE_BY_STATUS[status] ?? 'INTERNAL_ERROR';
-      this.respond(response, requestId, {
-        type: code,
-        title: toTitle(code),
-        status,
-        detail,
-        requestId,
-        retryable: RETRYABLE_ERROR_CODES.has(code),
+        retryable: RETRYABLE_ERROR_CODES.has(problem.code),
       });
       return;
     }

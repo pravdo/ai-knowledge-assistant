@@ -1,8 +1,11 @@
-import { Controller, Get, ServiceUnavailableException } from '@nestjs/common';
+import { Controller, Get, HttpStatus, Res } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import type { Response } from 'express';
+
+import { logger } from '../observability/logger.js';
 
 interface HealthResponse {
-  status: 'ok';
+  status: 'ok' | 'unavailable';
 }
 
 const REQUIRED_CONFIG_KEYS = [
@@ -15,22 +18,20 @@ const REQUIRED_CONFIG_KEYS = [
 export class HealthController {
   constructor(private readonly config: ConfigService) {}
 
-  // Reports that the process is running. Must not call any downstream service — see
-  // docs/architecture.md §NestJS control-plane API.
+  // Reports that the process is running. Must not call any downstream service
   @Get('live')
   live(): HealthResponse {
     return { status: 'ok' };
   }
 
-  // Verifies essential configuration is present — a lightweight check, not an expensive
-  // downstream dependency fan-out (§5.6).
+  // Verifies essential configuration is present
   @Get('ready')
-  ready(): HealthResponse {
+  ready(@Res({ passthrough: true }) response: Response): HealthResponse {
     const missing = REQUIRED_CONFIG_KEYS.filter((key) => !this.config.get<string>(key));
     if (missing.length > 0) {
-      throw new ServiceUnavailableException(
-        `Missing required configuration: ${missing.join(', ')}`,
-      );
+      logger.error(`not ready, missing configuration: ${missing.join(', ')}`);
+      response.status(HttpStatus.SERVICE_UNAVAILABLE);
+      return { status: 'unavailable' };
     }
     return { status: 'ok' };
   }

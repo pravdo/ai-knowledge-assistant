@@ -193,10 +193,9 @@ machines, authorization policy) → infrastructure (DynamoDB, S3, Cognito, provi
 `/v1/*` endpoints require authentication; every workspace endpoint loads membership server-side and
 verifies the required role before touching a resource (`WorkspaceAuthorizer.requireRole`, in
 `packages/domain`'s role-comparison helper). `/health/live` and `/health/ready` sit outside the
-`/v1` prefix and outside business authorization. The current module set
-(`apps/api/src/*/*.module.ts`) mirrors the endpoint groups this API will expose — most are still
-empty containers; `HealthModule` is the one with real content, since a liveness check has no
-dependency on anything not yet built.
+`/v1` prefix and outside business authorization. Modules (`apps/api/src/*/*.module.ts`) are added
+in the chunk that gives them real content — currently `HealthModule`, `WorkspacesModule` and
+`MembershipsModule` — rather than scaffolded empty ahead of time.
 
 ## RAG runtime and model integration
 
@@ -228,8 +227,7 @@ Seven CDK stacks (`infrastructure/lib/*.ts`), instantiated once per environment 
 | `ObservabilityStack` | Dashboards, alarms, log retention, budget notifications                   | Week 12     |
 
 All seven stacks exist today and synthesize successfully (`pnpm cdk synth`); they are intentionally
-resource-empty until the week they're built, the same way the NestJS module set is intentionally
-empty until its controllers/services land.
+resource-empty until the week they're built.
 
 ## Key design decisions
 

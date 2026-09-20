@@ -5,8 +5,7 @@ import { Injectable } from '@nestjs/common';
 import { ProblemDetailsException } from '../common/problem-details.exception.js';
 import { MembershipsRepository } from './memberships.repository.js';
 
-// §5.4: every workspace use case authorizes through this sequence — load membership, verify the
-// required role. Never authorize on the presence of a workspace/document ID alone.
+// Every workspace use case authorizes through this sequence — load membership, verify the required role
 @Injectable()
 export class MembershipsService {
   constructor(private readonly repository: MembershipsRepository) {}

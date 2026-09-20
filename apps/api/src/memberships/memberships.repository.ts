@@ -4,9 +4,6 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { GetCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
 
-// Item shape from docs/architecture.md §6.2/§6.3: PK=WORKSPACE#{id}, SK=MEMBER#{userId}, with a
-// GSI1 projection (GSI1PK=USER#{userId}) supporting the "list workspaces for a user" access
-// pattern without a table scan.
 export interface MembershipItem {
   pk: string;
   sk: string;

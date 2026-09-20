@@ -1,5 +1,9 @@
 import type { ArgumentsHost } from '@nestjs/common';
-import { BadRequestException } from '@nestjs/common';
+import {
+  BadRequestException,
+  NotFoundException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 
 import { ProblemDetailsException } from './problem-details.exception';
 import { ProblemDetailsFilter } from './problem-details.filter';
@@ -51,6 +55,28 @@ describe('ProblemDetailsFilter', () => {
     expect(response.json).toHaveBeenCalledWith(
       expect.objectContaining({ type: 'VALIDATION_FAILED', detail: 'name should not be empty' }),
     );
+  });
+
+  it('maps a Nest router 404 to NOT_FOUND', () => {
+    const { host, response } = createHost();
+
+    filter.catch(new NotFoundException('Cannot GET /v1/nope'), host);
+
+    expect(response.status).toHaveBeenCalledWith(404);
+    expect(response.json).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'NOT_FOUND', detail: 'Cannot GET /v1/nope' }),
+    );
+  });
+
+  it('does not relabel any other framework exception as a domain error', () => {
+    const logSpy = jest.spyOn(console, 'log').mockImplementation(() => undefined);
+    const { host, response } = createHost();
+
+    filter.catch(new ServiceUnavailableException('down'), host);
+
+    expect(response.status).toHaveBeenCalledWith(500);
+    expect(response.json).toHaveBeenCalledWith(expect.objectContaining({ type: 'INTERNAL_ERROR' }));
+    logSpy.mockRestore();
   });
 
   it('maps an unknown error to INTERNAL_ERROR without leaking its message to the client', () => {

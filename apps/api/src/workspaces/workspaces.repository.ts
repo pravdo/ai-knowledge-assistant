@@ -45,7 +45,7 @@ export class WorkspacesRepository {
     return this.config.getOrThrow<string>('APP_TABLE_NAME');
   }
 
-  // One transaction, not two writes: a workspace whose OWNER membership failed to persist would
+  // One transaction - a workspace whose OWNER membership failed to persist would
   // be invisible to every user including its creator, and impossible to delete through the API.
   async createWithOwner(workspace: WorkspaceRecord, ownerUserId: string): Promise<void> {
     const workspaceItem: WorkspaceItem = {

@@ -6,7 +6,7 @@ import { ProblemDetailsException } from '../common/problem-details.exception.js'
 import { MembershipsService } from '../memberships/memberships.service.js';
 import { WorkspacesRepository } from './workspaces.repository.js';
 
-export interface CreateWorkspaceInput {
+interface CreateWorkspaceInput {
   readonly name: string;
   readonly description: string;
   readonly createdBy: string;
@@ -41,13 +41,14 @@ export class WorkspacesService {
     return this.repository.findManyByIds(memberships.map((membership) => membership.workspaceId));
   }
 
-  // Callers must authorize via MembershipsService.requireRole() first — this does not check
-  // access itself, it only loads the record (and guards an invariant, see below).
-  async getById(workspaceId: string): Promise<WorkspaceRecord> {
+  // §5.4: authorization lives in the use case, not the controller, so no caller can skip it.
+  async getById(workspaceId: string, userId: string): Promise<WorkspaceRecord> {
+    await this.memberships.requireRole(workspaceId, userId, 'VIEWER');
+
     const workspace = await this.repository.findById(workspaceId);
     if (!workspace) {
-      // The caller's membership check guarantees a workspace exists — reaching this means the
-      // two records have gone out of sync, not a normal 404.
+      // A membership exists, so the workspace must too — reaching this means the two records
+      // have gone out of sync, not a normal 404.
       throw new ProblemDetailsException(
         'INTERNAL_ERROR',
         'Workspace record is missing despite an active membership.',

@@ -9,7 +9,10 @@ function createDeps() {
     findById: jest.fn(),
     findManyByIds: jest.fn(),
   };
-  const memberships = { listForUser: jest.fn() };
+  const memberships = {
+    listForUser: jest.fn(),
+    requireRole: jest.fn().mockResolvedValue(undefined),
+  };
   return { repository, memberships };
 }
 
@@ -54,12 +57,24 @@ describe('WorkspacesService', () => {
     expect(result).toBe(records);
   });
 
+  it('getById() requires VIEWER access before loading the record', async () => {
+    const { repository, memberships } = createDeps();
+    const denied = new ProblemDetailsException('WORKSPACE_ACCESS_DENIED', 'nope');
+    memberships.requireRole.mockRejectedValue(denied);
+    const service = new WorkspacesService(repository as never, memberships as never);
+
+    await expect(service.getById('ws-1', 'user-1')).rejects.toBe(denied);
+
+    expect(memberships.requireRole).toHaveBeenCalledWith('ws-1', 'user-1', 'VIEWER');
+    expect(repository.findById).not.toHaveBeenCalled();
+  });
+
   it('getById() throws INTERNAL_ERROR if the workspace record is unexpectedly missing', async () => {
     const { repository, memberships } = createDeps();
     repository.findById.mockResolvedValue(null);
     const service = new WorkspacesService(repository as never, memberships as never);
 
-    const error = await service.getById('ws-missing').catch((e: unknown) => e);
+    const error = await service.getById('ws-missing', 'user-1').catch((e: unknown) => e);
 
     expect(error).toBeInstanceOf(ProblemDetailsException);
     expect((error as ProblemDetailsException).code).toBe('INTERNAL_ERROR');

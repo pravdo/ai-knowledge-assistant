@@ -8,7 +8,12 @@ import { ProblemDetailsFilter } from './common/problem-details.filter.js';
 // Shared by main.ts (local dev, Express listening on a port) and lambda.ts (API Gateway via
 // serverless-express) so the two never drift apart.
 export async function createApp(): Promise<NestExpressApplication> {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  // Nest's default logger prints coloured, multi-line startup text (one line per route) into
+  // CloudWatch on every cold start; keep only its errors and warnings and log through the
+  // structured logger instead.
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    logger: ['error', 'warn'],
+  });
   const allowedOrigins = (process.env['CORS_ALLOWED_ORIGINS'] ?? 'http://localhost:4200')
     .split(',')
     .map((origin) => origin.trim())
