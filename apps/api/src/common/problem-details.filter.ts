@@ -5,13 +5,30 @@ import {
   type ArgumentsHost,
   type ExceptionFilter,
 } from '@nestjs/common';
-import type { ProblemDetails } from '@ai-knowledge-assistant/contracts';
+import type { ProblemDetails, StableErrorCode } from '@ai-knowledge-assistant/contracts';
 import { RETRYABLE_ERROR_CODES } from '@ai-knowledge-assistant/contracts';
 import { createLogger } from '@ai-knowledge-assistant/observability';
 import { randomUUID } from 'node:crypto';
 import type { Response } from 'express';
 
 import { ProblemDetailsException } from './problem-details.exception.js';
+
+// Exceptions Nest raises itself (validation pipe, the router's 404, the readiness probe's 503)
+// carry a status but no stable code. Map the status to the closest one — labelling all of them
+// VALIDATION_FAILED misreports a 404 as a bad request to clients and to log-based alerting.
+const CODE_BY_STATUS: Readonly<Record<number, StableErrorCode>> = {
+  [HttpStatus.BAD_REQUEST]: 'VALIDATION_FAILED',
+  [HttpStatus.UNAUTHORIZED]: 'AUTHENTICATION_REQUIRED',
+  [HttpStatus.FORBIDDEN]: 'WORKSPACE_ACCESS_DENIED',
+  [HttpStatus.NOT_FOUND]: 'NOT_FOUND',
+  [HttpStatus.CONFLICT]: 'CONFLICT',
+  [HttpStatus.TOO_MANY_REQUESTS]: 'RATE_LIMITED',
+};
+
+function toTitle(code: StableErrorCode): string {
+  const words = code.toLowerCase().replace(/_/g, ' ');
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
 
 const logger = createLogger({
   service: 'api',
@@ -50,13 +67,14 @@ export class ProblemDetailsFilter implements ExceptionFilter {
         : typeof rawMessage === 'string'
           ? rawMessage
           : exception.message;
+      const code = CODE_BY_STATUS[status] ?? 'INTERNAL_ERROR';
       this.respond(response, requestId, {
-        type: 'VALIDATION_FAILED',
-        title: 'Request validation failed',
+        type: code,
+        title: toTitle(code),
         status,
         detail,
         requestId,
-        retryable: false,
+        retryable: RETRYABLE_ERROR_CODES.has(code),
       });
       return;
     }

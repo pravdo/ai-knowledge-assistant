@@ -49,6 +49,8 @@ export class ApiStack extends Stack {
         COGNITO_CLIENT_ID: props.userPoolClientId,
         CORS_ALLOWED_ORIGINS: props.allowedOrigins.join(','),
       },
+      // esbuild is a root devDependency, not this package's: CDK runs the bundler from the repo
+      // root (wherever the pnpm lockfile lives), so that is where the binary must resolve.
       // The entry is apps/api's `tsc` output, not its TypeScript source: esbuild never implements
       // emitDecoratorMetadata, so bundling .ts directly drops the constructor parameter types
       // Nest's DI needs. `pnpm build:lambda` (run by cdk.json's app command) builds it first.

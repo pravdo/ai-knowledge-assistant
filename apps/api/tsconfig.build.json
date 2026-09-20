@@ -2,7 +2,10 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "rootDir": "./src",
-    "incremental": false
+    "incremental": false,
+    // Narrower than tsconfig.json's list, which also carries the test-only types the specs need:
+    // this config excludes **/*spec.ts, so jest/supertest types have no place in the build.
+    "types": ["node", "express", "aws-lambda"]
   },
   "exclude": ["node_modules", "test", "dist", "**/*spec.ts"]
 }

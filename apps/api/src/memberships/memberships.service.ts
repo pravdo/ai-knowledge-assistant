@@ -34,10 +34,6 @@ export class MembershipsService {
     return membership;
   }
 
-  createOwnerMembership(workspaceId: string, userId: string): Promise<void> {
-    return this.repository.create(workspaceId, userId, 'OWNER');
-  }
-
   listForUser(userId: string): Promise<WorkspaceMembership[]> {
     return this.repository.listForUser(userId);
   }

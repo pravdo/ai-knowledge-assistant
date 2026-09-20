@@ -29,30 +29,25 @@ function stackId(name: string): string {
   return `${APPLICATION_NAME}-${environment}-${name}`;
 }
 
-// Extra Cognito callback/logout URLs beyond localhost, e.g. once a CloudFront domain or custom
-// domain is known: `cdk deploy --context callbackUrls=https://d123.cloudfront.net/auth/callback`
-// (comma-separated for more than one).
-function contextUrlList(contextKey: string): string[] {
-  const raw = app.node.tryGetContext(contextKey) as string | undefined;
-  return raw
-    ? raw
-        .split(',')
-        .map((url) => url.trim())
-        .filter((url) => url.length > 0)
-    : [];
-}
-
 const edgeStack = new EdgeStack(app, stackId('Edge'), {
   env,
   applicationName: APPLICATION_NAME,
   environment,
 });
+// The browser origins the app is served from. Cognito (redirect URIs) and the API (CORS) must
+// both accept exactly these, so they are derived from EdgeStack rather than passed as deploy-time
+// flags — a flag that was forgotten once would silently lock real users out of sign-in.
+const webOrigins = [`https://${edgeStack.distributionDomainName}`];
+if (environment !== 'prod') {
+  webOrigins.push('http://localhost:4200');
+}
+
 const authStack = new AuthStack(app, stackId('Auth'), {
   env,
   applicationName: APPLICATION_NAME,
   environment,
-  callbackUrls: ['http://localhost:4200/auth/callback', ...contextUrlList('callbackUrls')],
-  logoutUrls: ['http://localhost:4200/', ...contextUrlList('logoutUrls')],
+  callbackUrls: webOrigins.map((origin) => `${origin}/auth/callback`),
+  logoutUrls: webOrigins.map((origin) => `${origin}/`),
 });
 
 const dataStack = new DataStack(app, stackId('Data'), {
@@ -68,7 +63,7 @@ const apiStack = new ApiStack(app, stackId('Api'), {
   userPoolClientId: authStack.userPoolClient.userPoolClientId,
   tableArn: dataStack.tableArn,
   tableName: dataStack.tableName,
-  allowedOrigins: [`https://${edgeStack.distributionDomainName}`, 'http://localhost:4200'],
+  allowedOrigins: webOrigins,
 });
 
 const stacks = [

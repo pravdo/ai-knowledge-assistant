@@ -30,17 +30,15 @@ export class WorkspacesService {
       updatedAt: now,
     };
 
-    await this.repository.create(workspace);
-    // The creator is always the first OWNER (§1.3 Journey A).
-    await this.memberships.createOwnerMembership(workspace.workspaceId, input.createdBy);
+    // The creator is always the first OWNER (§1.3 Journey A), written in the same transaction.
+    await this.repository.createWithOwner(workspace, input.createdBy);
 
     return workspace;
   }
 
-  listForUser(userId: string): Promise<WorkspaceRecord[]> {
-    return this.memberships
-      .listForUser(userId)
-      .then((memberships) => this.repository.findManyByIds(memberships.map((m) => m.workspaceId)));
+  async listForUser(userId: string): Promise<WorkspaceRecord[]> {
+    const memberships = await this.memberships.listForUser(userId);
+    return this.repository.findManyByIds(memberships.map((membership) => membership.workspaceId));
   }
 
   // Callers must authorize via MembershipsService.requireRole() first — this does not check

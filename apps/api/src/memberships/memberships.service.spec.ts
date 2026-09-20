@@ -6,7 +6,6 @@ import { MembershipsService } from './memberships.service';
 function createRepository(membership: WorkspaceMembership | null) {
   return {
     find: jest.fn().mockResolvedValue(membership),
-    create: jest.fn(),
     listForUser: jest.fn(),
   };
 }

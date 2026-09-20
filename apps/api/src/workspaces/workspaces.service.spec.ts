@@ -5,19 +5,16 @@ import { WorkspacesService } from './workspaces.service';
 
 function createDeps() {
   const repository = {
-    create: jest.fn().mockResolvedValue(undefined),
+    createWithOwner: jest.fn().mockResolvedValue(undefined),
     findById: jest.fn(),
     findManyByIds: jest.fn(),
   };
-  const memberships = {
-    createOwnerMembership: jest.fn().mockResolvedValue(undefined),
-    listForUser: jest.fn(),
-  };
+  const memberships = { listForUser: jest.fn() };
   return { repository, memberships };
 }
 
 describe('WorkspacesService', () => {
-  it('create() persists the workspace and grants the creator OWNER membership', async () => {
+  it('create() writes the workspace and the creator OWNER membership in one transaction', async () => {
     const { repository, memberships } = createDeps();
     const service = new WorkspacesService(repository as never, memberships as never);
 
@@ -29,8 +26,7 @@ describe('WorkspacesService', () => {
 
     expect(workspace.name).toBe('Docs');
     expect(workspace.createdBy).toBe('user-1');
-    expect(repository.create).toHaveBeenCalledWith(workspace);
-    expect(memberships.createOwnerMembership).toHaveBeenCalledWith(workspace.workspaceId, 'user-1');
+    expect(repository.createWithOwner).toHaveBeenCalledWith(workspace, 'user-1');
   });
 
   it('listForUser() resolves membership workspace IDs to workspace records', async () => {

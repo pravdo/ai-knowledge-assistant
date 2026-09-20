@@ -11,10 +11,11 @@ import type { Construct } from 'constructs';
 import type { ApplicationStackProps } from './environment.js';
 
 export interface AuthStackProps extends ApplicationStackProps {
-  /** @default ['http://localhost:4200/auth/callback'] */
-  readonly callbackUrls?: string[];
-  /** @default ['http://localhost:4200/'] */
-  readonly logoutUrls?: string[];
+  // Required rather than defaulted: Cognito rejects any redirect_uri that is not registered on
+  // the client, so a deploy that fell back to a localhost-only default would leave the deployed
+  // app unable to complete sign-in — silently, and only for real users.
+  readonly callbackUrls: string[];
+  readonly logoutUrls: string[];
 }
 
 // Cognito user pool + a public (no client secret) app client using Authorization Code with PKCE
@@ -64,8 +65,8 @@ export class AuthStack extends Stack {
       oAuth: {
         flows: { authorizationCodeGrant: true },
         scopes: [OAuthScope.OPENID, OAuthScope.EMAIL, OAuthScope.PROFILE],
-        callbackUrls: props.callbackUrls ?? ['http://localhost:4200/auth/callback'],
-        logoutUrls: props.logoutUrls ?? ['http://localhost:4200/'],
+        callbackUrls: props.callbackUrls,
+        logoutUrls: props.logoutUrls,
       },
       preventUserExistenceErrors: true,
     });

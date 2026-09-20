@@ -98,14 +98,15 @@ Set an AWS Budget + billing alarm in the console **before** deploying anything.
 ### Deploy or redeploy identity and edge
 
 ```bash
-pnpm cdk deploy aka-dev-Auth aka-dev-Edge --context environment=dev \
-  --context callbackUrls=https://<your-cloudfront-domain>/auth/callback \
-  --context logoutUrls=https://<your-cloudfront-domain>/
+pnpm cdk deploy aka-dev-Auth aka-dev-Edge --context environment=dev
 ```
 
-The `callbackUrls`/`logoutUrls` context is only needed once you know your CloudFront domain (a
-circular dependency on the first deploy — `localhost:4200` always works without it). Then wire the
-Angular app to the real Cognito pool: copy `UserPoolId`/`UserPoolClientId` from the deploy output
+Cognito's redirect URLs need no flags: `AuthStack` takes them from `EdgeStack`'s CloudFront domain
+(plus `localhost:4200` outside prod), so the deployed app and local development both stay signed in
+after a redeploy. Passing them by hand invited a deploy that omitted them, which silently reset the
+app client to localhost-only and broke hosted-UI sign-in for the deployed app.
+
+Then wire the Angular app to the real Cognito pool: copy `UserPoolId`/`UserPoolClientId` from the deploy output
 into `apps/web/src/environments/environment.ts` (`issuer` is
 `https://cognito-idp.<region>.amazonaws.com/<UserPoolId>`). None of this is a secret — a public
 SPA client has no client secret to protect.

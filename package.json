@@ -23,6 +23,7 @@
   },
   "devDependencies": {
     "@eslint/js": "catalog:",
+    "esbuild": "0.28.1",
     "eslint": "catalog:",
     "eslint-config-prettier": "catalog:",
     "prettier": "catalog:",
